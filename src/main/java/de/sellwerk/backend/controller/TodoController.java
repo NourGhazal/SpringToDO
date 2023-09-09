@@ -1,6 +1,7 @@
 package de.sellwerk.backend.controller;
 
 import de.sellwerk.backend.api.TodoApi;
+import de.sellwerk.backend.helper.UpdateStatus;
 import de.sellwerk.backend.logic.TodoLogic;
 import de.sellwerk.backend.persistence.TodoEntity;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,5 +31,17 @@ public class TodoController implements TodoApi {
     public ResponseEntity<List<TodoEntity>> getSpecificTodo(String title, String sortBy) {
         var allTodos = todoLogic.getTodos(title,sortBy);
         return new ResponseEntity<>(allTodos,HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteTodo(String title) {
+        todoLogic.deleteTodo(title);
+        return new ResponseEntity<>(null,HttpStatus.NO_CONTENT);
+    }
+
+    @Override
+    public ResponseEntity<Void> updateStatus(String title, UpdateStatus status) {
+        todoLogic.updateTodo(title,status.getStatus());
+        return new ResponseEntity<>(null,HttpStatus.NO_CONTENT);
     }
 }

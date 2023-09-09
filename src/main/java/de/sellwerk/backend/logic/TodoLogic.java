@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
+import javax.transaction.Transactional;
 import java.util.List;
 
 @Service
@@ -30,6 +31,15 @@ public class TodoLogic {
                         sortDirection.descending();
         if(title == null) return todoRepository.findAllSorted(sortDirection);
         return todoRepository.findByTitle(title,sortDirection);
+    }
+
+    @Transactional
+    public void deleteTodo(String title){
+        todoRepository.deleteByTitle(title);
+    }
+    @Transactional
+    public void updateTodo(String title, String todoStatus){
+            todoRepository.updateByTitle(title,todoStatus);
     }
 
 

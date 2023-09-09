@@ -1,8 +1,15 @@
 package de.sellwerk.backend;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import de.sellwerk.backend.helper.UpdateStatus;
+import org.apache.http.client.methods.HttpPatch;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,14 +23,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.web.client.RestTemplate;
-
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
 
 import de.sellwerk.backend.persistence.TodoEntity;
+
+import javax.transaction.Transactional;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
@@ -134,5 +139,44 @@ class BackendApplicationTests {
         assertEquals(1, todos.size());
 
         assertEquals(expectedTodo, todos.get(0));
+    }
+
+    @Test
+    @Sql(statements = "INSERT INTO TODO_ENTITY (id,title,status,created_At) VALUES (1,'TODO 1', 'NEW', {ts '2012-09-17 18:47:01'})", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    @Sql(statements = "INSERT INTO TODO_ENTITY (id,title,status,created_At) VALUES (2,'TODO 2', 'DONE', {ts '2013-09-17 18:47:01'})", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void deleteToDo_ShouldRemoveTodoFromDataBase() {
+        final TodoEntity expectedTodo2 = new TodoEntity(2L, "TODO 2", "DONE", LocalDateTime.of(2013, 9, 17, 18, 47, 1));
+
+        restTemplate.delete(baseUrl+"/TODO 1");
+
+        final ResponseEntity<List<TodoEntity >> response = restTemplate.exchange(baseUrl,
+                HttpMethod.GET, httpEntity, new ParameterizedTypeReference<>() {});
+
+
+        var todos = response.getBody();
+        assertNotNull(todos);
+        assertEquals(1, todos.size());
+        assertEquals(expectedTodo2, todos.get(0));
+    }
+
+    @Test
+    @Sql(statements = "INSERT INTO TODO_ENTITY (id,title,status,created_At) VALUES (1,'TODO 1', 'NEW', {ts '2012-09-17 18:47:01'})", executionPhase = Sql.ExecutionPhase.BEFORE_TEST_METHOD)
+    void updateToDo_ShouldUpdatedTodoStatusInDatabase() throws IOException {
+        final String expectedStatus = "DONE";
+
+        //Alternative way to using restTemplate as it does not support PATCH requests
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        var httpPatch = new HttpPatch(baseUrl+"/TODO%201");
+        httpPatch.setEntity(new StringEntity("{\"status\": \"DONE\"}", ContentType.APPLICATION_JSON));
+        httpClient.execute(httpPatch);
+
+        final ResponseEntity<List<TodoEntity >> response = restTemplate.exchange(baseUrl,
+                HttpMethod.GET, httpEntity, new ParameterizedTypeReference<>() {});
+
+
+        var todos = response.getBody();
+        assertNotNull(todos);
+        assertEquals(1, todos.size());
+        assertEquals(expectedStatus, todos.get(0).getStatus());
     }
 }
